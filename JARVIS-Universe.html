@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>JARVIS Universe</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{background:#000;height:100%;overflow:hidden;font-family:monospace}
+  #cv{position:fixed;inset:0;width:100%;height:100%;display:block}
+  .hud{position:fixed;left:14px;top:14px;font-size:10px;letter-spacing:3px;color:#00d4ff88;z-index:2}
+  .hud b{color:#00d4ff;text-shadow:0 0 12px #00d4ff}
+  .tip{position:fixed;left:0;right:0;bottom:16px;text-align:center;font-size:10px;letter-spacing:2px;color:#4a6a80;z-index:2}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<div class="hud"><b>J.A.R.V.I.S</b><br><span style="font-size:8px;color:#4a6a80">UNIVERSE CORE - LIVING</span></div>
+<div class="tip">COSMIC ENERGY FIELD</div>
+<script>
+function initUniverse(){
+  var cv=document.getElementById('cv');
+  if(!cv){setTimeout(initUniverse,50);return;}
+  var ctx=cv.getContext('2d');
+  if(!ctx){return;}
+
+var t=0,dpr=Math.min(window.devicePixelRatio||1,2);
+var W=0,H=0;
+
+function resize(){
+  W=window.innerWidth||document.documentElement.clientWidth||360;
+  H=window.innerHeight||document.documentElement.clientHeight||640;
+  if(!W)W=360;if(!H)H=640;
+  cv.width=W*dpr;cv.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+resize();
+window.addEventListener('resize',resize);
+window.addEventListener('orientationchange',function(){setTimeout(resize,200);});
+
+// -- Deep starfield - many depth layers filling the whole screen --
+var stars=[];
+for(var i=0;i<1400;i++){
+  stars.push({
+    a:Math.random()*Math.PI*2,            // angle from center
+    r:Math.pow(Math.random(),0.6),         // normalized radius 0..1 (more toward edges)
+    depth:0.3+Math.random()*0.7,           // brightness/size by depth
+    sz:Math.random()*1.6+0.3,
+    tw:Math.random()*Math.PI*2,
+    tspd:0.5+Math.random()*3,
+    spin:(0.02+Math.random()*0.06)         // orbital speed - inner faster
+  });
+}
+// -- Spiral galaxy arms - sweeping filament bands --
+var arms=4;
+var armStars=[];
+for(var i=0;i<2200;i++){
+  var arm=Math.floor(Math.random()*arms);
+  var dist=Math.pow(Math.random(),0.5);    // 0..1 from center
+  var armAngle=arm*Math.PI*2/arms;
+  var spread=(Math.random()-0.5)*0.5;       // scatter around the arm
+  armStars.push({
+    arm:arm, dist:dist, base:armAngle, spread:spread,
+    sz:Math.random()*1.4+0.2,
+    br:0.3+Math.random()*0.7,
+    tw:Math.random()*Math.PI*2, tspd:0.5+Math.random()*3
+  });
+}
+// -- Energy filament wisps drifting through space --
+var wisps=[];
+for(var i=0;i<70;i++){
+  wisps.push({a:Math.random()*Math.PI*2,r:0.2+Math.random()*0.8,len:0.08+Math.random()*0.2,curve:(Math.random()-.5)*1.2,spin:0.01+Math.random()*0.04,br:0.3+Math.random()*0.6,flick:Math.random()*Math.PI*2,fspd:1+Math.random()*3});
+}
+// -- Distant nebula clouds --
+var clouds=[];
+for(var i=0;i<10;i++)clouds.push({a:Math.random()*Math.PI*2,r:0.25+Math.random()*0.7,sz:0.15+Math.random()*0.25,spin:(Math.random()-.5)*0.01,hue:Math.random(),ph:Math.random()*Math.PI*2});
+
+function frame(){
+  t+=0.016;
+  var cx=W*0.5, cy=H*0.5;
+  var maxR=Math.max(W,H)*0.75*fieldBreath;   // field swells with breath
+  var rot=t*0.06;                 // whole galaxy slow rotation
+  // BIG breathing - whole universe expands and contracts
+  var breathWave=Math.sin(t*0.6);
+  var breath=1+breathWave*0.14;          // much bigger swell (was 0.03)
+  var glowB=1+breathWave*0.4;
+  var fieldBreath=1+breathWave*0.12;     // entire field scales
+  var holeR=Math.min(W,H)*0.10*breath;   // smaller, calmer eye
+
+  function blue(a){return 'rgba(0,180,255,'+a+')';}
+  function cyan(a){return 'rgba(120,225,255,'+a+')';}
+  function white(a){return 'rgba(225,250,255,'+a+')';}
+  function purp(a){return 'rgba(120,90,255,'+a+')';}
+
+  ctx.globalCompositeOperation='source-over';
+  ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
+
+  // faint full-screen ambient
+  var ag=ctx.createRadialGradient(cx,cy,0,cx,cy,maxR);
+  ag.addColorStop(0,'rgba(0,120,200,0.08)');ag.addColorStop(0.4,'rgba(20,40,120,0.04)');ag.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=ag;ctx.fillRect(0,0,W,H);
+
+  ctx.globalCompositeOperation='lighter';
+
+  // -- nebula clouds (soft colored haze) --
+  clouds.forEach(function(cl){
+    cl.a+=cl.spin;cl.ph+=0.01;
+    var rad=cl.r*maxR;
+    var x=cx+Math.cos(cl.a+rot)*rad, y=cy+Math.sin(cl.a+rot)*rad*0.85;
+    var sz=cl.sz*maxR*(0.85+0.25*Math.sin(cl.ph));
+    var g=ctx.createRadialGradient(x,y,0,x,y,sz);
+    var col=cl.hue<0.5?blue:purp;
+    g.addColorStop(0,col(0.06*glowB));g.addColorStop(0.5,col(0.02));g.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=g;ctx.fillRect(x-sz,y-sz,sz*2,sz*2);
+  });
+
+  // -- spiral galaxy arms --
+  armStars.forEach(function(s){
+    s.tw+=0.016*s.tspd;
+    // logarithmic spiral: angle grows with distance
+    var ang=s.base+s.dist*3.2+rot*(1.4-s.dist)+s.spread;
+    var rad=s.dist*maxR;
+    var x=cx+Math.cos(ang)*rad, y=cy+Math.sin(ang)*rad*0.78;
+    if(rad<holeR*0.5)return; // dense toward core
+    var tw=0.6+Math.sin(s.tw)*0.4;
+    var depthFade=1-s.dist*0.3;
+    var a=s.br*tw*depthFade*0.8;
+    var sz=s.sz*(1.2-s.dist*0.4);
+    ctx.beginPath();ctx.arc(x,y,sz,0,Math.PI*2);
+    ctx.fillStyle=s.dist<0.3?white(a):cyan(a);ctx.fill();
+  });
+
+  // -- deep starfield --
+  stars.forEach(function(st){
+    st.tw+=0.016*st.tspd;
+    var ang=st.a+rot*st.spin*15;
+    var rad=st.r*maxR;
+    if(rad<holeR*0.6)return;
+    var x=cx+Math.cos(ang)*rad, y=cy+Math.sin(ang)*rad*0.85;
+    var tw=0.5+Math.sin(st.tw)*0.5;
+    var a=st.depth*tw*0.7;
+    ctx.beginPath();ctx.arc(x,y,st.sz*st.depth,0,Math.PI*2);
+    ctx.fillStyle=blue(a);ctx.fill();
+  });
+
+  // -- energy filament wisps --
+  wisps.forEach(function(w){
+    w.a+=w.spin*0.3;w.flick+=0.016*w.fspd;
+    var flick=0.5+Math.sin(w.flick)*0.5;
+    ctx.beginPath();var started=false;
+    for(var i=0;i<=12;i++){
+      var frac=i/12;
+      var ang=w.a+rot+frac*w.curve;
+      var rad=(w.r+frac*w.len)*maxR;
+      if(rad<holeR){started=false;continue;}
+      var x=cx+Math.cos(ang)*rad, y=cy+Math.sin(ang)*rad*0.85;
+      if(!started){ctx.moveTo(x,y);started=true;}else ctx.lineTo(x,y);
+    }
+    ctx.strokeStyle=cyan(w.br*0.4*glowB*flick);ctx.lineWidth=0.8;ctx.stroke();
+  });
+
+  // -- GALACTIC CORE - soft radiant glow, dense star bulge, no busy rings --
+  // Dense bright star bulge at the center (galaxy core glow)
+  var bulgeR=holeR*2.6*glowB;
+  var bg=ctx.createRadialGradient(cx,cy,0,cx,cy,bulgeR);
+  bg.addColorStop(0,white(0.55*glowB));
+  bg.addColorStop(0.25,cyan(0.35*glowB));
+  bg.addColorStop(0.55,blue(0.18*glowB));
+  bg.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+  // Tight bright nucleus
+  var ng=ctx.createRadialGradient(cx,cy,0,cx,cy,holeR*0.9*glowB);
+  ng.addColorStop(0,white(0.95));ng.addColorStop(0.5,cyan(0.5*glowB));ng.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=ng;ctx.fillRect(0,0,W,H);
+  // dense core stars swirling tightly
+  for(var cs=0;cs<60;cs++){
+    var csa=t*0.8+cs*0.41;
+    var csr=holeR*(0.4+((cs*0.97)%1)*1.8)*glowB;
+    var cx2=cx+Math.cos(csa)*csr, cy2=cy+Math.sin(csa)*csr*0.82;
+    var csz=(0.5+((cs*0.53)%1)*1.2);
+    var ctw=0.5+Math.sin(t*2+cs)*0.5;
+    ctx.beginPath();ctx.arc(cx2,cy2,csz,0,Math.PI*2);ctx.fillStyle=white(0.7*ctw*glowB);ctx.fill();
+  }
+  // bright pinpoint center
+  ctx.beginPath();ctx.arc(cx,cy,holeR*0.12*glowB,0,Math.PI*2);ctx.fillStyle=white(1);ctx.fill();
+
+  ctx.globalCompositeOperation='source-over';
+  requestAnimationFrame(frame);
+}
+resize();requestAnimationFrame(frame);
+
+}
+if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',initUniverse);}
+else{initUniverse();}
+</script>
+</body>
+</html>
